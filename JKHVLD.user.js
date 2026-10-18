@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hitomi Visited Link Dimmer (Detail Page Only)
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.2
 // @description  Highlight visited links with transparency on hitomi.la (Detail page visit only)
 // @author       JKAKK
 // @match        https://hitomi.la/*
@@ -70,7 +70,7 @@
          */
         getVisitedSet()
         {
-            const data = GM_getValue(STORAGE_KEY, []);
+            const data = GM_getValue(this.STORAGE_KEY, []);
 
             return new Set(data);
         }
@@ -84,7 +84,7 @@
         {
             const visitedSet = this.getVisitedSet();
             visitedSet.add(id);
-            GM_setValue(STORAGE_KEY, Array.from(visitedSet));
+            GM_setValue(this.STORAGE_KEY, Array.from(visitedSet));
         }
 
         /**
