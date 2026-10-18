@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hitomi Visited Link Dimmer (Detail Page Only)
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      3.0
 // @description  Highlight visited links with transparency on hitomi.la (Detail page visit only)
 // @author       JKAKK
 // @match        https://hitomi.la/*
@@ -13,95 +13,144 @@
 
 (function()
 {
-    const STORAGE_KEY = 'hitomi_visited_ids';
 
-    // 저장된 방문 ID 목록 불러오기
-    function getVisitedSet()
+    class MainManager
     {
-        const data = GM_getValue(STORAGE_KEY, []);
-        return new Set(data);
-    }
+        STORAGE_KEY = 'hitomi_visited_ids';
 
-    // 방문한 ID 저장하기
-    function saveVisitedId(id)
-    {
-        const visitedSet = getVisitedSet();
-        visitedSet.add(id);
-        GM_setValue(STORAGE_KEY, Array.from(visitedSet));
-    }
+        /**
+         * #### 적용 범위 정규식
+         * @type {RegExp} 
+         */
+        APPLY_PAGE_REGEX = /^\/(doujinshi|manga|game|cg|anime|artistg|imageset)\//;
 
-    // URL 경로에서 작품 ID 추출 (예: /doujinshi/title-korean-12345.html 또는 /reader/12345.html)
-    function extractIdFromUrl(url)
-    {
-        const match = url.match(/-(\d+)\.html/) || url.match(/\/reader\/(\d+)\.html/) || url.match(/\/galleries\/(\d+)\.html/);
-        return match ? match[1] : null;
-    }
+        /**
+         * #### 옵저버
+         * @type {MutationObserver} 
+         */
+        observer = null;
 
-    // 1. 작품 상세 정보 페이지 접속 시에만 현재 ID 저장 (reader/뷰어 페이지 제외)
-    const currentId = extractIdFromUrl(location.pathname);
-    const isDetailPage = /^\/(doujinshi|manga|game|cg|anime|artistg|imageset)\//.test(location.pathname);
-
-    if (isDetailPage && currentId)
-    {
-        saveVisitedId(currentId);
-    }
-
-    // 2. 검색 및 목록 페이지 처리
-    //
-    function injectStyle()
-    {
-        if (document.getElementById('hitomi-dimmer-style')) return;
-        const style = document.createElement('style');
-        style.id = 'hitomi-dimmer-style';
-        style.textContent = `
-            .visited-dimmed {
-                opacity: 0.35 !important;
-                transition: opacity 0.2s ease-in-out;
-            }
-            .visited-dimmed:hover {
-                opacity: 0.8 !important;
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // 카드 투명도 적용
-    function applyDimming()
-    {
-        const visitedSet = getVisitedSet();
-        const galleryCards = document.querySelectorAll('.gallery-content > div, .gallery-list > div, .dj-list > div');
-
-        galleryCards.forEach(card =>
+        constructor()
         {
-            const link = card.querySelector('a');
-            if (!link) return;
+            this.init();
+        }
 
-            const galleryId = extractIdFromUrl(link.href);
-            if (galleryId && visitedSet.has(galleryId))
+        init()
+        {
+            // 작품 상세 정보 페이지 접속 시 현재 ID 저장 (reader/뷰어 페이지 제외)
+            const currentId = this.extractIdFromUrl(location.pathname);
+            const isDetailPage = this.APPLY_PAGE_REGEX.test(location.pathname);
+        
+            if (isDetailPage && currentId)
+                this.saveVisitedId(currentId);
+
+            // 초기 실행 및 동적 변경 감시
+            this.injectStyle();
+            this.applyDimming();
+
+            this.observer = new MutationObserver(() => {
+                this.applyDimming();
+            });
+
+            this.observer.observe(document.body,
             {
-                card.classList.add('visited-dimmed');
+                childList: true,
+                subtree: true
+            });
+
+            // 다른 탭(상세 페이지)을 보고 검색 탭으로 돌아왔을 때 투명도 갱신
+            window.addEventListener('focus', () => {
+                this.applyDimming();
+            });
+        }
+
+        /**
+         * #### 저장된 방문 기록 불러오기
+         * @returns {Set<string>} - 방문 기록
+         */
+        getVisitedSet()
+        {
+            const data = GM_getValue(STORAGE_KEY, []);
+
+            return new Set(data);
+        }
+
+        /**
+         * #### 방문한 id 저장하기
+         * @param {string} id - 방문한 id
+         * @returns {void} - 
+         */
+        saveVisitedId(id)
+        {
+            const visitedSet = this.getVisitedSet();
+            visitedSet.add(id);
+            GM_setValue(STORAGE_KEY, Array.from(visitedSet));
+        }
+
+        /**
+         * #### URL에서 작품 ID 추출
+         * @param {string} url - 
+         * @returns {string} - 작품 id
+         */
+        extractIdFromUrl(url)
+        {
+            const match = url.match(/-(\d+)\.html/) || url.match(/\/reader\/(\d+)\.html/) || url.match(/\/galleries\/(\d+)\.html/);
+
+            resultId = match ? match[1] : null;
+
+            if(!resultId)
+                console.log("id 추출 실패")
+                
+            return resultId
+        }
+
+        /**
+         * #### 적용시 필요한 스타일 주입
+         * @returns {void} - 
+         */
+        injectStyle()
+        {
+            if (document.getElementById('hitomi-dimmer-style')) 
+            {
+                return;
             }
-        });
+
+            const style = document.createElement('style');
+            style.id = 'hitomi-dimmer-style';
+            style.textContent = `
+                .visited-dimmed {
+                    opacity: 0.35 !important;
+                    transition: opacity 0.2s ease-in-out;
+                }
+                .visited-dimmed:hover {
+                    opacity: 0.8 !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        /**
+         * #### 해당하는 카드 투명도 적용
+         * @returns {void} - 
+         */
+        applyDimming()
+        {
+            const visitedSet = this.getVisitedSet();
+            const galleryCards = document.querySelectorAll('.gallery-content > div, .gallery-list > div, .dj-list > div');
+    
+            galleryCards.forEach(card =>
+            {
+                const link = card.querySelector('a');
+                if (!link) 
+                    return;
+    
+                const galleryId = this.extractIdFromUrl(link.href);
+                if (galleryId && visitedSet.has(galleryId))
+                    card.classList.add('visited-dimmed');
+            });
+        }
     }
 
-    // 초기 실행 및 동적 변경 감시
-    injectStyle();
-    applyDimming();
-
-    const observer = new MutationObserver(() =>
-    {
-        applyDimming();
-    });
-
-    observer.observe(document.body,
-    {
-        childList: true,
-        subtree: true
-    });
-
-    // 다른 탭(상세 페이지)을 보고 검색 탭으로 돌아왔을 때 투명도 갱신
-    window.addEventListener('focus', () =>
-    {
-        applyDimming();
-    });
+    // MARK: 실행 영역
+    new MainManager();
 })();
