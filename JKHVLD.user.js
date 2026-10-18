@@ -1,12 +1,12 @@
 // ==UserScript==
 // @name         Hitomi Visited Link Dimmer (Detail Page Only)
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.1
 // @description  Highlight visited links with transparency on hitomi.la (Detail page visit only)
 // @author       JKAKK
 // @match        https://hitomi.la/*
-// @updateURL    https://raw.githubusercontent.com/junsarakill/jk-hitomi-visited-link-dimmer/JKHVLD.user.js
-// @downloadURL  https://raw.githubusercontent.com/junsarakill/jk-hitomi-visited-link-dimmer/JKHVLD.user.js
+// @updateURL    https://raw.githubusercontent.com/junsarakill/jk-hitomi-visited-link-dimmer/main/JKHVLD.user.js
+// @downloadURL  https://raw.githubusercontent.com/junsarakill/jk-hitomi-visited-link-dimmer/main/JKHVLD.user.js
 // @grant        GM_setValue
 // @grant        GM_getValue
 // ==/UserScript==
