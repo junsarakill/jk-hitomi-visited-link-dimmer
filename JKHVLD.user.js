@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hitomi Visited Link Dimmer (Detail Page Only)
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      3.3
 // @description  Highlight visited links with transparency on hitomi.la (Detail page visit only)
 // @author       JKAKK
 // @match        https://hitomi.la/*
@@ -96,7 +96,7 @@
         {
             const match = url.match(/-(\d+)\.html/) || url.match(/\/reader\/(\d+)\.html/) || url.match(/\/galleries\/(\d+)\.html/);
 
-            resultId = match ? match[1] : null;
+            const resultId = match ? match[1] : null;
 
             if(!resultId)
                 console.log("id 추출 실패")
